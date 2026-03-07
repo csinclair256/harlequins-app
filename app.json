@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#121212"
     },
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -31,7 +31,13 @@
       "favicon": "./assets/icon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Allow Harlequins BJJ to add competitions to your calendar."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
