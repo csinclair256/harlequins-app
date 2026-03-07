@@ -94,17 +94,14 @@ export default function HomeScreen() {
             >
               <View style={styles.thumbnailContainer}>
                 {(() => {
-                  const storagePath = item.event_image_storage_path;
-                  const remoteUrl = item.event_image_url;
-                  const storagePathPrefix = '/storage/v1/object/public/competition-images/';
-                  const isStorageUrl = remoteUrl && remoteUrl.includes(storagePathPrefix);
-                  const imageUri = storagePath
-                    ? `${competitionImagesStorageUrl}/${storagePath}`
-                    : isStorageUrl
-                      ? `${competitionImagesStorageUrl}/${remoteUrl.split(storagePathPrefix)[1] || ''}`
-                      : remoteUrl
-                        ? `${supabaseFunctionsUrl}/proxy-image?url=${encodeURIComponent(remoteUrl)}`
-                        : '';
+                  const rawUrl = item.event_image_url;
+                  const imageUri = !rawUrl
+                    ? ''
+                    : !rawUrl.startsWith('http')
+                      ? `${competitionImagesStorageUrl}/${rawUrl}`
+                      : rawUrl.includes('/storage/v1/object/public/')
+                        ? rawUrl
+                        : `${supabaseFunctionsUrl}/proxy-image?url=${encodeURIComponent(rawUrl)}`;
                   return imageUri ? (
                     <ThumbnailWithFallback uri={imageUri} />
                   ) : (
