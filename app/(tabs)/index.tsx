@@ -9,6 +9,9 @@ import { MapPin, Calendar, ExternalLink, Trophy } from 'lucide-react-native';
 // This import jumps up two levels to find your supabase.js config
 import { supabase, supabaseFunctionsUrl, competitionImagesStorageUrl } from '../../supabase';
 
+const TODAY = new Date();
+TODAY.setHours(0, 0, 0, 0);
+
 function ThumbnailWithFallback({ uri }: { uri: string }) {
   const [failed, setFailed] = useState(false);
   if (failed || !uri) {
@@ -65,19 +68,19 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      
+      <StatusBar barStyle="light-content" />
+
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Harlequins BJJ</Text>
           <Text style={styles.subtitle}>2026 Competition Schedule</Text>
         </View>
-        <Trophy color="#000" size={28} />
+        <Trophy color="#FFFFFF" size={28} />
       </View>
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#000" />
+          <ActivityIndicator size="large" color="#FFFFFF" />
         </View>
       ) : (
         <FlatList
@@ -87,9 +90,9 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           renderItem={({ item }) => (
-            <TouchableOpacity 
-              activeOpacity={0.8} 
-              style={styles.card} 
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.card}
               onPress={() => item.web_address && Linking.openURL(item.web_address)}
             >
               <View style={styles.thumbnailContainer}>
@@ -118,18 +121,27 @@ export default function HomeScreen() {
                 </Text>
                 
                 <View style={styles.detailRow}>
-                  <Calendar color="#8E8E93" size={12} />
+                  <Calendar color="#AAAAAA" size={12} />
                   <Text style={styles.detailText}>{item.event_date}</Text>
                 </View>
 
                 <View style={styles.detailRow}>
-                  <MapPin color="#8E8E93" size={12} />
+                  <MapPin color="#AAAAAA" size={12} />
                   <Text style={styles.detailText}>{item.location}</Text>
                 </View>
 
                 <View style={styles.footer}>
-                  <Text style={styles.registerBtn}>Register</Text>
-                  <ExternalLink color="#007AFF" size={12} />
+                  {(() => {
+                    const isPast = item.event_date && new Date(item.event_date) < TODAY;
+                    return (
+                      <View style={[styles.actionBtn, isPast ? styles.actionBtnPast : styles.actionBtnFuture]}>
+                        <Text style={[styles.actionBtnText, isPast && styles.actionBtnTextPast]}>
+                          {isPast ? 'Results' : 'Register'}
+                        </Text>
+                        <ExternalLink color={isPast ? '#666666' : '#FFFFFF'} size={11} />
+                      </View>
+                    );
+                  })()}
                 </View>
               </View>
             </TouchableOpacity>
@@ -142,52 +154,61 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+  container: { flex: 1, backgroundColor: '#121212' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20, 
-    paddingVertical: 15, 
-    backgroundColor: '#FFF',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#1E1E1E',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA'
+    borderBottomColor: '#2C2C2C'
   },
-  title: { fontSize: 26, fontWeight: '800', color: '#000' },
-  subtitle: { fontSize: 14, color: '#8E8E93', fontWeight: '500', marginTop: 2 },
+  title: { fontSize: 26, fontWeight: '800', color: '#FFFFFF' },
+  subtitle: { fontSize: 14, color: '#AAAAAA', fontWeight: '500', marginTop: 2 },
   listContainer: { padding: 16 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { 
-    backgroundColor: '#FFF', 
-    borderRadius: 12, 
+  card: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
     flexDirection: 'row',
-    padding: 12, 
+    padding: 12,
     marginBottom: 16,
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 2 }, 
-    shadowOpacity: 0.05, 
-    shadowRadius: 8, 
-    elevation: 2
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4
   },
-  thumbnailContainer: { 
-    width: 80, 
-    height: 80, 
-    borderRadius: 8, 
-    backgroundColor: '#F2F2F7', 
-    overflow: 'hidden', 
-    marginRight: 15 
+  thumbnailContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#2C2C2C',
+    overflow: 'hidden',
+    marginRight: 15
   },
   thumbnailImage: { width: '100%', height: '100%' },
   placeholderIcon: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   infoContainer: { flex: 1, justifyContent: 'space-between' },
-  eventName: { fontSize: 16, fontWeight: '700', color: '#000', marginBottom: 4 },
+  eventName: { fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
   detailRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  detailText: { marginLeft: 4, fontSize: 12, color: '#8E8E93' },
-  footer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    alignSelf: 'flex-end', 
-    marginTop: 5 
+  detailText: { marginLeft: 4, fontSize: 12, color: '#AAAAAA' },
+  footer: {
+    alignSelf: 'flex-end',
+    marginTop: 5
   },
-  registerBtn: { color: '#007AFF', fontWeight: '700', fontSize: 12, marginRight: 4 }
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 5,
+  },
+  actionBtnFuture: { backgroundColor: '#2979FF' },
+  actionBtnPast: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#444444' },
+  actionBtnText: { fontWeight: '700', fontSize: 12, color: '#FFFFFF' },
+  actionBtnTextPast: { color: '#666666' },
 });
