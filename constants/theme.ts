@@ -1,6 +1,16 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * theme.ts — Harlequins BJJ colour system
+ *
+ * Exports:
+ *   Colors  — light/dark system tokens (used by useThemeColor hook + themed components)
+ *   Fonts   — platform font stacks
+ *   Theme   — Harlequins BJJ brand token system (R-05, Qwen2.5-Coder 32B, 2026-03-20)
+ *             Replaces all inline hex strings in StyleSheet and JSX color props.
+ *
+ * Usage (brand tokens):
+ *   import { Theme } from '@/constants/theme';
+ *   backgroundColor: Theme.colors.surface
+ *   color={Theme.colors.gold}
  */
 
 import { Platform } from 'react-native';
@@ -29,13 +39,9 @@ export const Colors = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
@@ -51,3 +57,37 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+// ─── Harlequins BJJ Brand Tokens (R-05) ──────────────────────────────────────
+
+export const Theme = {
+  colors: {
+    // ── Backgrounds ───────────────────────────────────────────
+    backgroundDark:   '#121212',   // App root background
+    surface:          '#1E1E1E',   // Cards, header, tab bar
+    surfaceHighlight: '#2C2C2C',   // Thumbnail placeholder, dividers
+
+    // ── Brand ─────────────────────────────────────────────────
+    gold:             '#FFD700',   // Priority events, countdown, calendar icon
+    primary:          '#2979FF',   // Register / future-event action button
+
+    // ── Semantic ──────────────────────────────────────────────
+    success:          '#00E676',   // Competition-day countdown label
+    danger:           '#FF453A',   // CLOSED stamp border + text (R-10)
+    shadow:           '#000000',   // Card shadow base
+
+    // ── Text ──────────────────────────────────────────────────
+    textWhite:        '#FFFFFF',   // Primary text, subtitle, active tab
+    textMuted:        '#AAAAAA',   // Secondary text, date/location labels, icons
+    textDisabled:     '#666666',   // Past-event text and icon tint
+    textOnGold:       '#121212',   // Text rendered on gold badge background
+    iconPlaceholder:  '#CCCCCC',   // Trophy placeholder icon
+
+    // ── Borders ───────────────────────────────────────────────
+    borderSubtle:     '#2C2C2C',   // Header bottom border, tab bar top
+    borderMuted:      '#444444',   // Past-event action button border
+    borderInactive:   '#888888',   // Inactive tab icon tint (tab layout)
+  },
+} as const;
+
+export type ThemeColors = typeof Theme.colors;
