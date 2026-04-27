@@ -1,92 +1,115 @@
 /**
- * theme.ts — Harlequins BJJ colour system
+ * theme.ts — Harlequins BJJ Member App (White)
  *
- * Exports:
- *   Colors  — light/dark system tokens (used by useThemeColor hook + themed components)
- *   Fonts   — platform font stacks
- *   Theme   — Harlequins BJJ brand token system (R-05, Qwen2.5-Coder 32B, 2026-03-20)
- *             Replaces all inline hex strings in StyleSheet and JSX color props.
+ * White theme — inverted from the dark baseline (2026-03-24).
+ * All Member App components import from this file.
+ * Staff App uses theme.dark.ts.
  *
- * Usage (brand tokens):
- *   import { Theme } from '@/constants/theme';
- *   backgroundColor: Theme.colors.surface
- *   color={Theme.colors.gold}
+ * INVERSION RULES APPLIED:
+ *   backgroundDark   #121212 → #F5F5F5  (warm off-white, not harsh pure white)
+ *   surface          #1E1E1E → #FFFFFF  (pure white cards on off-white bg)
+ *   surfaceHighlight #2C2C2C → #EBEBEB  (light grey dividers/placeholders)
+ *   textWhite        #FFFFFF → #111111  (near-black, not pure — reduces harshness)
+ *   textMuted        #AAAAAA → #555555  (mid-grey, readable on white)
+ *   textDisabled     #666666 → #999999  (lighter disabled on white bg)
+ *   textOnGold       #121212 → #121212  (UNCHANGED — dark text on gold badge)
+ *   iconPlaceholder  #CCCCCC → #BBBBBB  (slightly darker on white bg)
+ *   borderSubtle     #2C2C2C → #E0E0E0  (light border on white)
+ *   borderMuted      #444444 → #CCCCCC  (muted border on white)
+ *   borderInactive   #888888 → #BBBBBB  (inactive tab on white)
+ *   shadow           #000000 → #000000  (UNCHANGED — shadows always dark)
+ *   gold             #D4A017 → #D4A017  (UNCHANGED — brand colour)
+ *   goldLight        #F0C040 → #C49A00  (darkened — needs contrast on white bg)
+ *   goldDark         #9A7010 → #9A7010  (UNCHANGED — active states)
+ *   primary          #2979FF → #1565C0  (darkened blue — contrast on white)
+ *   success          #00E676 → #00897B  (darkened green — contrast on white)
+ *   danger           #FF453A → #E53935  (darkened red — contrast on white)
+ *
+ * Series 0100 | Black Apple Sovereign Systems
  */
 
 import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorDark  = '#fff';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text:             '#11181C',
+    background:       '#fff',
+    tint:             tintColorLight,
+    icon:             '#687076',
+    tabIconDefault:   '#687076',
+    tabIconSelected:  tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text:             '#ECEDEE',
+    background:       '#151718',
+    tint:             tintColorDark,
+    icon:             '#9BA1A6',
+    tabIconDefault:   '#9BA1A6',
+    tabIconSelected:  tintColorDark,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    sans: 'system-ui',
-    serif: 'ui-serif',
+    sans:    'system-ui',
+    serif:   'ui-serif',
     rounded: 'ui-rounded',
-    mono: 'ui-monospace',
+    mono:    'ui-monospace',
   },
   default: {
-    sans: 'normal',
-    serif: 'serif',
+    sans:    'normal',
+    serif:   'serif',
     rounded: 'normal',
-    mono: 'monospace',
+    mono:    'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
+    sans:    "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    serif:   "Georgia, 'Times New Roman', serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    mono:    "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
 
-// ─── Harlequins BJJ Brand Tokens (R-05) ──────────────────────────────────────
+// ─── Harlequins BJJ Member App — White Brand Tokens ───────────────────────────
+// SOVEREIGN HARLEQUINS GOLD — white variant locked 2026-03-24
+// This is the MEMBER (WHITE) theme. Staff App uses theme.dark.ts.
 
 export const Theme = {
   colors: {
-    // ── Backgrounds ───────────────────────────────────────────
-    backgroundDark:   '#121212',   // App root background
-    surface:          '#1E1E1E',   // Cards, header, tab bar
-    surfaceHighlight: '#2C2C2C',   // Thumbnail placeholder, dividers
+    // ── Backgrounds ─────────────────────────────────────────────
+    backgroundDark:   '#F5F5F5',   // App root — warm off-white (not pure white)
+    surface:          '#FFFFFF',   // Cards, header, tab bar — pure white
+    surfaceHighlight: '#EBEBEB',   // Thumbnail placeholder, dividers — light grey
 
-    // ── Brand ─────────────────────────────────────────────────
-    gold:             '#FFD700',   // Priority events, countdown, calendar icon
-    primary:          '#2979FF',   // Register / future-event action button
+    // ── Brand ───────────────────────────────────────────────────
+    gold:             '#D4A017',   // UNCHANGED — Harlequins Standard
+    goldLight:        '#C49A00',   // Darkened for contrast on white backgrounds
+    goldDark:         '#9A7010',   // UNCHANGED — active states, focus rings
+    primary:          '#1565C0',   // Darkened blue for contrast on white
 
-    // ── Semantic ──────────────────────────────────────────────
-    success:          '#00E676',   // Competition-day countdown label
-    danger:           '#FF453A',   // CLOSED stamp border + text (R-10)
-    shadow:           '#000000',   // Card shadow base
+    // ── Semantic ────────────────────────────────────────────────
+    success:          '#00897B',   // Darkened green for contrast on white
+    danger:           '#E53935',   // Darkened red for contrast on white
+    shadow:           '#000000',   // UNCHANGED — shadows always dark
 
-    // ── Text ──────────────────────────────────────────────────
-    textWhite:        '#FFFFFF',   // Primary text, subtitle, active tab
-    textMuted:        '#AAAAAA',   // Secondary text, date/location labels, icons
-    textDisabled:     '#666666',   // Past-event text and icon tint
-    textOnGold:       '#121212',   // Text rendered on gold badge background
-    iconPlaceholder:  '#CCCCCC',   // Trophy placeholder icon
+    // ── Text ────────────────────────────────────────────────────
+    textWhite:        '#111111',   // PRIMARY TEXT on white — near-black
+    textMuted:        '#555555',   // Secondary text on white — mid-grey
+    textDisabled:     '#999999',   // Past-event text on white — light grey
+    textOnGold:       '#121212',   // UNCHANGED — dark text on gold badge
+    iconPlaceholder:  '#BBBBBB',   // Placeholder icon on white
 
-    // ── Borders ───────────────────────────────────────────────
-    borderSubtle:     '#2C2C2C',   // Header bottom border, tab bar top
-    borderMuted:      '#444444',   // Past-event action button border
-    borderInactive:   '#888888',   // Inactive tab icon tint (tab layout)
+    // ── Borders ─────────────────────────────────────────────────
+    borderSubtle:     '#E0E0E0',   // Header border, tab bar top on white
+    borderMuted:      '#CCCCCC',   // Past-event button border on white
+    borderInactive:   '#BBBBBB',   // Inactive tab icon on white
+
+    // ── Member App identity ──────────────────────────────────────
+    appVariant:       'member' as const,
+    logoAsset:        'Logos/Harlequins_Curved_White_Logo.png' as const,
   },
 } as const;
 

@@ -41,6 +41,7 @@ export interface Competition {
   location: string | null;
   event_image_url: string | null;
   web_address: string | null;
+  registration_fees: string | null; // JSON string: { phases: RegPhase[] } or legacy text
 }
 
 export interface Database {

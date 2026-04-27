@@ -17,4 +17,5 @@ export const PRIORITY_KEYWORDS: readonly string[] = [
   'QJC States',
   'Australian National',
   'Pan Pac',
+  'Grading',
 ] as const;

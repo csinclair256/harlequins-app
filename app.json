@@ -4,10 +4,10 @@
     "slug": "harlequins-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/pwa-icon.png",
     "scheme": "harlequins-bjj",
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/pwa-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#121212"
     },
@@ -28,7 +28,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/icon.png"
+      "favicon": "./assets/pwa-icon.png"
     },
     "plugins": [
       "expo-router",

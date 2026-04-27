@@ -7,7 +7,7 @@ redirects = []
 [functions."*"]
 
 [build]
-publish = "/Users/cameronsinclair/Developer/Black_Apple/01_Clients/Harlequins_BJJ/01_Ingestion/source/dist"
+publish = "/Users/cameronsinclair/Developer/Black_Apple/2100_Clients/Harlequins_BJJ/01_Ingestion/source/dist"
 publishOrigin = "ui"
 commandOrigin = "ui"
 command = "expo export -p web"

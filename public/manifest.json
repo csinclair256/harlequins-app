@@ -4,18 +4,18 @@
   "description": "View the Harlequins BJJ competition schedule and register for events.",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/pwa-icon-192.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/icon.png",
+      "src": "/pwa-icon-512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
   ],
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#F5F5F5",
+  "background_color": "#F5F5F5"
 }
