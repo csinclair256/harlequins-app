@@ -1,11 +1,135 @@
 // Netlify serverless function — grading registration email notification
-// Sends a confirmation email to the organiser via Gmail SMTP.
+// Sends a structured organiser email via Gmail SMTP on each completed registration.
 //
-// Required env vars in Netlify Dashboard → Site → Environment Variables:
+// Required env vars (Netlify Dashboard → Site → Environment Variables):
 //   GMAIL_USER          = harlequinsbjj@gmail.com
 //   GMAIL_APP_PASSWORD  = <16-char Google App Password>
 
 const nodemailer = require("nodemailer");
+
+const CLASS_LABEL = { adults: "Adults", mini: "Mini Quinns (4–7 yrs)", warriors: "Harlequin Warriors (8–14 yrs)" };
+const PAYMENT_LABEL = { stripe: "Card (Square)", bank: "Bank Transfer", cash: "Cash on Day" };
+
+function belt(p) {
+  const b = p.belt ? p.belt.charAt(0).toUpperCase() + p.belt.slice(1) : "—";
+  const s = p.stripes ? ` · ${p.stripes} stripe${p.stripes === "1" ? "" : "s"}` : "";
+  return b + s;
+}
+
+function equipmentBlock(p) {
+  if (!p.product || p.product === "none") {
+    return `<tr>
+      <td style="padding:10px 16px;color:#555;font-style:italic">Grading only — no equipment order</td>
+    </tr>`;
+  }
+
+  const rows = [];
+
+  rows.push(`<tr>
+    <td style="padding:6px 16px 2px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.5px" colspan="2">Equipment Order</td>
+  </tr>`);
+
+  rows.push(`<tr>
+    <td style="padding:3px 16px;color:#555;width:160px">Product</td>
+    <td style="padding:3px 16px"><strong>${p.productName || "—"}</strong></td>
+  </tr>`);
+
+  if (p.giSize) {
+    const sizeLabel = p.giSize === "store" ? "Measure in store" : p.giSize;
+    rows.push(`<tr>
+      <td style="padding:3px 16px;color:#555">Gi Size</td>
+      <td style="padding:3px 16px"><strong>${sizeLabel}</strong></td>
+    </tr>`);
+  }
+
+  if (p.rashguardSize) {
+    const sizeLabel = p.rashguardSize === "store" ? "Measure in store" : p.rashguardSize;
+    rows.push(`<tr>
+      <td style="padding:3px 16px;color:#555">Rashguard Size</td>
+      <td style="padding:3px 16px"><strong>${sizeLabel}</strong></td>
+    </tr>`);
+  }
+
+  if (p.shortsSize) {
+    const sizeLabel = p.shortsSize === "store" ? "Measure in store" : p.shortsSize;
+    rows.push(`<tr>
+      <td style="padding:3px 16px;color:#555">Shorts Size</td>
+      <td style="padding:3px 16px"><strong>${sizeLabel}</strong></td>
+    </tr>`);
+  }
+
+  const gradingLine = p.freeGrading
+    ? '<span style="color:#2e7d32">FREE — included with purchase</span>'
+    : `$${Number(p.gradingPrice).toFixed(2)}`;
+
+  rows.push(`<tr>
+    <td style="padding:3px 16px;color:#555">Grading Fee</td>
+    <td style="padding:3px 16px">${gradingLine}</td>
+  </tr>`);
+
+  rows.push(`<tr>
+    <td style="padding:3px 16px 10px;color:#555">Subtotal</td>
+    <td style="padding:3px 16px 10px"><strong>$${Number(p.totalPrice).toFixed(2)}</strong></td>
+  </tr>`);
+
+  return rows.join("\n");
+}
+
+function coachBlock(p) {
+  const rows = [];
+
+  rows.push(`<tr>
+    <td style="padding:10px 16px 2px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.5px" colspan="2">Coach Assessment</td>
+  </tr>`);
+
+  rows.push(`<tr>
+    <td style="padding:3px 16px;color:#555;width:160px">Current Belt</td>
+    <td style="padding:3px 16px"><strong>${belt(p)}</strong></td>
+  </tr>`);
+
+  if (p.beltTime) {
+    rows.push(`<tr>
+      <td style="padding:3px 16px;color:#555">Time at Belt</td>
+      <td style="padding:3px 16px">${p.beltTime}</td>
+    </tr>`);
+  }
+
+  if (p.timeBJJ) {
+    rows.push(`<tr>
+      <td style="padding:3px 16px;color:#555">Total BJJ Training</td>
+      <td style="padding:3px 16px">${p.timeBJJ}</td>
+    </tr>`);
+  }
+
+  return rows.join("\n");
+}
+
+function participantCard(p, idx) {
+  const classLabel = CLASS_LABEL[p.class] || p.class || "—";
+
+  return `
+<div style="border:1px solid #ddd;border-radius:6px;overflow:hidden;margin-bottom:16px">
+
+  <!-- Participant header -->
+  <div style="background:#f5f5f5;padding:12px 16px;border-bottom:1px solid #ddd">
+    <span style="font-weight:bold;font-size:15px">${p.first} ${p.last}</span>
+    <span style="color:#666;font-size:13px;margin-left:24px">${classLabel}</span>
+  </div>
+
+  <table style="width:100%;border-collapse:collapse">
+
+    <!-- Coach assessment -->
+    ${coachBlock(p)}
+
+    <!-- Divider -->
+    <tr><td colspan="2" style="padding:0 16px"><div style="border-top:1px solid #eee"></div></td></tr>
+
+    <!-- Equipment order -->
+    ${equipmentBlock(p)}
+
+  </table>
+</div>`;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -15,11 +139,8 @@ exports.handler = async (event) => {
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
   if (!user || !pass) {
-    console.error("Gmail credentials not configured");
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Email service not configured" }),
-    };
+    console.error("GMAIL_USER or GMAIL_APP_PASSWORD not set");
+    return { statusCode: 500, body: JSON.stringify({ error: "Email service not configured" }) };
   }
 
   let data;
@@ -29,81 +150,168 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "Invalid request body" }) };
   }
 
-  const { contact, participants, total, paymentConfirmedAt, totalCombinedSavings } = data;
+  const { contact, participants = [], total, payment, paymentStatus, paymentConfirmedAt, totalCombinedSavings, notes } = data;
 
-  const participantRows = (participants || []).map((p) => {
-    const lines = [
-      `<strong>${p.first} ${p.last}</strong>`,
-      `Class: ${p.class}`,
-      `Belt: ${p.belt}`,
-    ];
-    if (p.product && p.product !== "none") lines.push(`Product: ${p.productName}`);
-    if (p.freeGrading) lines.push('<span style="color:#2e7d32">FREE Grading included</span>');
-    if (p.giSize) lines.push(`Gi size: ${p.giSize}`);
-    if (p.rashguardSize) lines.push(`Rashguard: ${p.rashguardSize}`);
-    if (p.shortsSize) lines.push(`Shorts: ${p.shortsSize}`);
-    lines.push(`Subtotal: <strong>$${Number(p.totalPrice).toFixed(2)}</strong>`);
-    return `<tr><td style="padding:10px 8px;border-bottom:1px solid #eee;vertical-align:top">${lines.join("<br>")}</td></tr>`;
-  }).join("");
+  const isPaid = payment === "stripe" || paymentStatus === "paid";
+  const isBankTransfer = payment === "bank";
+  const isCash = payment === "cash";
+
+  // Top banner — quick scan indicator only
+  const bannerBg    = isPaid ? "#e8f5e9" : "#fff3e0";
+  const bannerBorder = isPaid ? "#2e7d32" : "#e65100";
+  const bannerText  = isPaid
+    ? `<strong style="color:#2e7d32">&#10003; PAID — Card (Square)</strong>`
+    : isBankTransfer
+      ? `<strong style="color:#e65100">&#9888; AWAITING BANK TRANSFER</strong>`
+      : `<strong style="color:#e65100">&#9888; CASH COLLECTION REQUIRED</strong>`;
 
   const confirmedAt = paymentConfirmedAt
     ? new Date(paymentConfirmedAt).toLocaleString("en-AU", { timeZone: "Australia/Brisbane" })
     : new Date().toLocaleString("en-AU", { timeZone: "Australia/Brisbane" });
 
   const totalStr = `$${Number(total).toFixed(2)}`;
-  const savingsBlock =
-    Number(totalCombinedSavings) > 0
-      ? `<br><span style="color:#2e7d32">Savings applied: $${Number(totalCombinedSavings).toFixed(2)}</span>`
-      : "";
+
+  // Full payment section
+  const savingsRow = Number(totalCombinedSavings) > 0
+    ? `<tr>
+        <td style="padding:4px 0;color:#888;width:130px;font-size:13px">Savings Applied</td>
+        <td style="padding:4px 0;color:#2e7d32">&#8722;$${Number(totalCombinedSavings).toFixed(2)}</td>
+      </tr>`
+    : "";
+
+  let paymentStatusRow, paymentActionBlock;
+  if (isPaid) {
+    paymentStatusRow = `<tr>
+      <td style="padding:4px 0;color:#888;font-size:13px">Status</td>
+      <td style="padding:4px 0"><span style="color:#2e7d32;font-weight:bold">&#10003; Paid in Full</span></td>
+    </tr>
+    <tr>
+      <td style="padding:4px 0;color:#888;font-size:13px">Confirmed</td>
+      <td style="padding:4px 0">${confirmedAt}</td>
+    </tr>`;
+    paymentActionBlock = `<div style="background:#e8f5e9;border-left:4px solid #2e7d32;border-radius:0 4px 4px 0;padding:12px 16px;margin-top:14px">
+      <strong style="color:#2e7d32">No further action required.</strong>
+      <div style="margin-top:4px;color:#555;font-size:13px">Payment received via Square. Registration is confirmed.</div>
+    </div>`;
+  } else if (isBankTransfer) {
+    paymentStatusRow = `<tr>
+      <td style="padding:4px 0;color:#888;font-size:13px">Status</td>
+      <td style="padding:4px 0"><span style="color:#e65100;font-weight:bold">&#9888; Awaiting Receipt</span></td>
+    </tr>`;
+    paymentActionBlock = `<div style="background:#fff3e0;border-left:4px solid #e65100;border-radius:0 4px 4px 0;padding:14px 16px;margin-top:14px">
+      <strong style="color:#e65100">Action Required — Bank Transfer</strong>
+      <ul style="margin:10px 0 0;padding-left:18px;color:#444;font-size:13px;line-height:1.8">
+        <li>Look for an incoming transfer of <strong>${totalStr}</strong></li>
+        <li>Reference may include: <strong>${contact.first} ${contact.last}</strong></li>
+        <li>If not received by <strong>10 June 2026</strong>, follow up with registrant</li>
+        <li>Contact: ${contact.first} ${contact.last} &bull; <a href="tel:${contact.phone}" style="color:#1565c0">${contact.phone || "no phone provided"}</a> &bull; <a href="mailto:${contact.email}" style="color:#1565c0">${contact.email}</a></li>
+      </ul>
+    </div>`;
+  } else {
+    paymentStatusRow = `<tr>
+      <td style="padding:4px 0;color:#888;font-size:13px">Status</td>
+      <td style="padding:4px 0"><span style="color:#e65100;font-weight:bold">&#9888; Collect on Grading Day</span></td>
+    </tr>`;
+    paymentActionBlock = `<div style="background:#fff3e0;border-left:4px solid #e65100;border-radius:0 4px 4px 0;padding:14px 16px;margin-top:14px">
+      <strong style="color:#e65100">Action Required — Cash Collection</strong>
+      <ul style="margin:10px 0 0;padding-left:18px;color:#444;font-size:13px;line-height:1.8">
+        <li>Collect <strong>${totalStr} cash</strong> from <strong>${contact.first} ${contact.last}</strong> at sign-in</li>
+        <li>Grading day: <strong>13 June 2026</strong></li>
+        <li>Contact: <a href="tel:${contact.phone}" style="color:#1565c0">${contact.phone || "no phone provided"}</a> &bull; <a href="mailto:${contact.email}" style="color:#1565c0">${contact.email}</a></li>
+        <li>Do not issue equipment until cash is collected</li>
+      </ul>
+    </div>`;
+  }
+
+  const paymentSection = `
+<div style="padding:16px 24px 20px;background:#fff">
+  <h2 style="margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">Payment</h2>
+  <table style="width:100%;border-collapse:collapse">
+    <tr>
+      <td style="padding:4px 0;color:#888;width:130px;font-size:13px">Method</td>
+      <td style="padding:4px 0"><strong>${PAYMENT_LABEL[payment] || payment}</strong></td>
+    </tr>
+    <tr>
+      <td style="padding:4px 0;color:#888;font-size:13px">Amount</td>
+      <td style="padding:4px 0"><strong>${totalStr}</strong></td>
+    </tr>
+    ${savingsRow}
+    ${paymentStatusRow}
+  </table>
+  ${paymentActionBlock}
+</div>`;
+
+  const participantCards = participants.map((p, i) => participantCard(p, i)).join("\n");
+
+  const notesBlock = notes
+    ? `<div style="padding:16px 24px 0;background:#fff">
+        <h2 style="margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">Registrant Notes</h2>
+        <p style="margin:0;color:#444;font-style:italic">"${notes}"</p>
+      </div>`
+    : "";
 
   const html = `
-<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #ddd">
-  <div style="background:#D4A017;padding:20px;text-align:center">
-    <h1 style="color:#fff;margin:0;font-size:20px">Harlequins BJJ — New Grading Registration</h1>
-  </div>
-  <div style="padding:24px;background:#fff">
-    <h2 style="color:#333;margin-top:0">Card Payment Confirmed ✓</h2>
+<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:16px;background:#f0f0f0;font-family:Arial,sans-serif">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
 
-    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+  <!-- Header -->
+  <div style="background:#D4A017;padding:24px;text-align:center">
+    <div style="color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:2px;opacity:0.85;margin-bottom:4px">Harlequins BJJ</div>
+    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:bold">New Grading Registration</h1>
+    <div style="color:#fff;opacity:0.85;font-size:13px;margin-top:6px">Mid-Year Grading &mdash; 13 June 2026</div>
+  </div>
+
+  <!-- Status banner — quick scan indicator -->
+  <div style="background:${bannerBg};border-left:4px solid ${bannerBorder};padding:12px 20px">
+    ${bannerText}
+    <span style="color:#666;margin-left:10px;font-size:13px">${confirmedAt}</span>
+  </div>
+
+  <!-- Contact -->
+  <div style="padding:20px 24px;background:#fff">
+    <h2 style="margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">Contact</h2>
+    <table style="width:100%;border-collapse:collapse">
       <tr>
-        <td style="padding:6px 0;color:#666;width:130px">Contact</td>
-        <td style="padding:6px 0"><strong>${contact.first} ${contact.last}</strong></td>
+        <td style="padding:4px 0;color:#888;width:130px;font-size:13px">Name</td>
+        <td style="padding:4px 0"><strong>${contact.first} ${contact.last}</strong>${contact.role ? ` <span style="color:#888;font-weight:normal">(${contact.role})</span>` : ""}</td>
       </tr>
       <tr>
-        <td style="padding:6px 0;color:#666">Email</td>
-        <td style="padding:6px 0">${contact.email}</td>
+        <td style="padding:4px 0;color:#888;font-size:13px">Email</td>
+        <td style="padding:4px 0"><a href="mailto:${contact.email}" style="color:#1565c0">${contact.email}</a></td>
       </tr>
       <tr>
-        <td style="padding:6px 0;color:#666">Phone</td>
-        <td style="padding:6px 0">${contact.phone || "—"}</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:#666">Role</td>
-        <td style="padding:6px 0">${contact.role || "—"}</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:#666">Payment</td>
-        <td style="padding:6px 0">Card (Square)</td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:#666">Confirmed</td>
-        <td style="padding:6px 0">${confirmedAt}</td>
+        <td style="padding:4px 0;color:#888;font-size:13px">Phone</td>
+        <td style="padding:4px 0">${contact.phone ? `<a href="tel:${contact.phone}" style="color:#1565c0">${contact.phone}</a>` : "—"}</td>
       </tr>
     </table>
-
-    <h3 style="color:#333;border-top:2px solid #D4A017;padding-top:14px;margin-bottom:0">Participants</h3>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:16px">
-      ${participantRows}
-    </table>
-
-    <div style="background:#f5f5f5;padding:14px;border-radius:4px">
-      <strong>Total Paid: ${totalStr}</strong>${savingsBlock}
-    </div>
   </div>
-  <div style="padding:12px 24px;background:#f9f9f9;font-size:12px;color:#999;text-align:center">
-    Harlequins BJJ Mid-Year Grading &mdash; 13 June 2026
+
+  <!-- Participants -->
+  <div style="padding:0 24px 4px;background:#fff">
+    <h2 style="margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">
+      Participants (${participants.length})
+    </h2>
+    ${participantCards}
   </div>
-</div>`;
+
+  ${notesBlock}
+
+  ${paymentSection}
+
+  <!-- Footer -->
+  <div style="padding:14px 24px;background:#f9f9f9;text-align:center;font-size:11px;color:#aaa;border-top:1px solid #eee">
+    Harlequins BJJ Grading Registration System &mdash; harlequins-comp-tracker.netlify.app
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  const subject = isPaid
+    ? `[PAID] Grading Registration — ${participants.map(p => `${p.first} ${p.last}`).join(", ")} · $${Number(total).toFixed(2)}`
+    : `[${isBankTransfer ? "BANK PENDING" : "CASH ON DAY"}] Grading Registration — ${participants.map(p => `${p.first} ${p.last}`).join(", ")}`;
 
   const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -114,7 +322,7 @@ exports.handler = async (event) => {
     await transporter.sendMail({
       from: `"Harlequins BJJ Grading" <${user}>`,
       to: user,
-      subject: `Grading Registration: ${contact.first} ${contact.last} — ${totalStr} paid`,
+      subject,
       html,
     });
     return {
