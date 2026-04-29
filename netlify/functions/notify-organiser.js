@@ -154,7 +154,8 @@ function buildRegistrantEmail(data) {
   <div style="padding:24px">
     <h2 style="margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">What to Bring</h2>
     <ul style="margin:0;padding-left:20px;color:#444;font-size:14px;line-height:2">
-      <li>Clean gi and/or no-gi gear</li>
+      <li>Clean <strong>Gi</strong> (Gi only — no-gi not permitted)</li>
+      <li>Rash guard <em>worn under Gi top</em></li>
       <li>Mouthguard</li>
       <li>Water bottle</li>
       <li>Your best attitude — leave nerves at the door</li>
