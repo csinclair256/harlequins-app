@@ -2051,6 +2051,14 @@ function saveRegistration(data) {
   localStorage.setItem(CONFIG.storageKey, JSON.stringify(existing));
 }
 
+function notifyOrganiser(data) {
+  fetch('/.netlify/functions/notify-organiser', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).catch(err => console.warn('Organiser notification failed:', err));
+}
+
 function generateICS() {
   const uid = `hrlq-grading-2026-${Date.now()}@harlequins.com.au`;
   const dtstamp = new Date().toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
@@ -2379,7 +2387,8 @@ function completeRegistration() {
   
   // Save final registration
   saveRegistration(data);
-  
+  notifyOrganiser(data);
+
   // Show success screen
   document.getElementById('grading-form').style.display = 'none';
   document.getElementById('post-payment-section').style.display = 'none';
