@@ -318,13 +318,51 @@ exports.handler = async (event) => {
     auth: { user, pass },
   });
 
+  // Supabase write — fire alongside email, failures logged but don't block response
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  const supabaseWrite = supabaseUrl && supabaseKey
+    ? fetch(`${supabaseUrl}/rest/v1/grading_registrations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseKey}`,
+          "apikey": supabaseKey,
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify({
+          submitted_at: data.submittedAt || new Date().toISOString(),
+          grading_date: "2026-06-13",
+          contact: data.contact,
+          participants: data.participants,
+          payment: data.payment,
+          payment_status: isPaid ? "paid" : "pending",
+          payment_confirmed_at: data.paymentConfirmedAt || null,
+          total: Number(data.total),
+          total_savings: Number(data.totalCombinedSavings || 0),
+          notes: data.notes || null,
+        }),
+      }).then(async (res) => {
+        if (!res.ok) {
+          const body = await res.text();
+          console.error("Supabase write error:", res.status, body);
+        } else {
+          console.log("Supabase write OK");
+        }
+      }).catch((err) => console.error("Supabase write failed:", err))
+    : Promise.resolve();
+
   try {
-    await transporter.sendMail({
-      from: `"Harlequins BJJ Grading" <${user}>`,
-      to: user,
-      subject,
-      html,
-    });
+    await Promise.all([
+      transporter.sendMail({
+        from: `"Harlequins BJJ Grading" <${user}>`,
+        to: user,
+        subject,
+        html,
+      }),
+      supabaseWrite,
+    ]);
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
