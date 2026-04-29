@@ -10,6 +10,173 @@ const nodemailer = require("nodemailer");
 const CLASS_LABEL = { adults: "Adults", mini: "Mini Quinns (4–7 yrs)", warriors: "Harlequin Warriors (8–14 yrs)" };
 const PAYMENT_LABEL = { stripe: "Card (Square)", bank: "Bank Transfer", cash: "Cash on Day" };
 
+const EVENT = {
+  name:      "Harlequins BJJ Mid-Year Grading 2026",
+  date:      "Saturday, 13 June 2026",
+  timeYouth: "8:45 AM – 9:45 AM",
+  timeAdult: "10:30 AM – 12:00 PM",
+  location:  "18/200 Grand Ave, Forest Lake QLD 4078",
+  mapUrl:    "https://maps.google.com/?q=18/200+Grand+Ave+Forest+Lake+QLD+4078",
+};
+
+function sessionTime(participants) {
+  const hasYouth  = participants.some(p => p.class === "mini" || p.class === "warriors");
+  const hasAdults = participants.some(p => p.class === "adults");
+  if (hasYouth && hasAdults) return `Youth: ${EVENT.timeYouth} &nbsp;|&nbsp; Adults: ${EVENT.timeAdult}`;
+  if (hasYouth)  return `Youth — ${EVENT.timeYouth}`;
+  return `Adults — ${EVENT.timeAdult}`;
+}
+
+function buildRegistrantEmail(data) {
+  const { contact, participants = [], payment, paymentStatus, total, totalCombinedSavings, notes } = data;
+  const isPaid    = payment === "stripe" || paymentStatus === "paid";
+  const isBank    = payment === "bank";
+  const isCash    = payment === "cash";
+
+  // Participant summary rows
+  const participantRows = participants.map(p => {
+    const classLabel = CLASS_LABEL[p.class] || p.class;
+    const beltLabel  = p.belt ? p.belt.charAt(0).toUpperCase() + p.belt.slice(1) : "—";
+    const stripes    = p.stripes && p.stripes !== "0" ? ` · ${p.stripes} stripe${p.stripes === "1" ? "" : "s"}` : "";
+
+    let productLine = "";
+    if (p.product && p.product !== "none") {
+      const sizes = [];
+      if (p.giSize)        sizes.push(p.giSize === "store" ? "size in store" : p.giSize);
+      if (p.rashguardSize) sizes.push(`rashguard ${p.rashguardSize === "store" ? "in store" : p.rashguardSize}`);
+      if (p.shortsSize)    sizes.push(`shorts ${p.shortsSize === "store" ? "in store" : p.shortsSize}`);
+      productLine = `<div style="margin-top:4px;color:#555;font-size:13px">&#128230; ${p.productName}${sizes.length ? ` — ${sizes.join(", ")}` : ""}</div>`;
+    }
+
+    const gradingLine = p.freeGrading
+      ? `<span style="color:#2e7d32;font-size:12px">Grading FREE with purchase</span>`
+      : `<span style="font-size:12px;color:#555">Grading fee: $${Number(p.gradingPrice).toFixed(2)}</span>`;
+
+    return `
+<tr>
+  <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;vertical-align:top">
+    <div style="font-weight:bold;font-size:15px">${p.first} ${p.last}</div>
+    <div style="color:#888;font-size:13px;margin-top:2px">${classLabel} &nbsp;|&nbsp; ${beltLabel} belt${stripes}</div>
+    ${productLine}
+    <div style="margin-top:4px">${gradingLine}</div>
+  </td>
+</tr>`;
+  }).join("");
+
+  // Payment status block
+  let paymentBlock;
+  if (isPaid) {
+    paymentBlock = `
+<div style="background:#e8f5e9;border-left:4px solid #2e7d32;border-radius:0 6px 6px 0;padding:14px 16px;margin:20px 0">
+  <div style="color:#2e7d32;font-weight:bold;font-size:15px">&#10003; Payment Confirmed</div>
+  <div style="color:#555;margin-top:4px;font-size:13px">$${Number(total).toFixed(2)} paid via card. Your spot is locked in.</div>
+  ${Number(totalCombinedSavings) > 0 ? `<div style="color:#2e7d32;font-size:13px;margin-top:4px">You saved $${Number(totalCombinedSavings).toFixed(2)} with your package deal!</div>` : ""}
+</div>`;
+  } else if (isBank) {
+    paymentBlock = `
+<div style="background:#fff8e1;border-left:4px solid #f9a825;border-radius:0 6px 6px 0;padding:14px 16px;margin:20px 0">
+  <div style="color:#e65100;font-weight:bold;font-size:15px">&#9888; Bank Transfer Required</div>
+  <div style="color:#555;margin-top:4px;font-size:13px">Please transfer <strong>$${Number(total).toFixed(2)}</strong> to secure your spot. Your registration is provisional until payment is received.</div>
+  <div style="color:#555;font-size:13px;margin-top:6px">Contact us at harlequinsbjj@gmail.com for bank details.</div>
+</div>`;
+  } else {
+    paymentBlock = `
+<div style="background:#fff8e1;border-left:4px solid #f9a825;border-radius:0 6px 6px 0;padding:14px 16px;margin:20px 0">
+  <div style="color:#e65100;font-weight:bold;font-size:15px">&#9888; Cash on the Day</div>
+  <div style="color:#555;margin-top:4px;font-size:13px">Please bring <strong>$${Number(total).toFixed(2)} cash</strong> to sign-in on grading day. Exact change appreciated.</div>
+</div>`;
+  }
+
+  const notesLine = notes
+    ? `<div style="margin-top:16px;padding:12px 16px;background:#f9f9f9;border-radius:6px;font-size:13px;color:#555;font-style:italic">"${notes}"</div>`
+    : "";
+
+  const names = participants.map(p => p.first).join(" & ");
+
+  return `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:16px;background:#f0f0f0;font-family:Arial,sans-serif">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)">
+
+  <!-- Header -->
+  <div style="background:#121212;padding:28px 24px 20px;text-align:center">
+    <img src="https://harlequins-comp-tracker.netlify.app/assets/assets/logo.49d129e73b3bd523144766212fc551bd.png"
+         alt="Harlequins BJJ"
+         width="300"
+         style="max-width:85%;height:auto;display:block;margin:0 auto" />
+    <div style="font-size:40px;margin:14px 0 8px">🥋</div>
+    <h1 style="color:#D4A017;margin:0;font-size:26px;font-weight:900;letter-spacing:-0.5px">You're In!</h1>
+    <div style="color:#aaa;font-size:14px;margin-top:8px">Registration confirmed for ${names}</div>
+  </div>
+
+  <!-- Intro -->
+  <div style="padding:28px 24px 0">
+    <p style="font-size:16px;color:#333;margin:0;line-height:1.6">
+      Hey <strong>${contact.first}</strong>! The mat is booked, the belt is on the line —
+      it's time for ${names} to show what ${participants.length === 1 ? "they've" : "they've all"} been working for.
+      We'll see you on <strong>13 June</strong>. Come ready.
+    </p>
+  </div>
+
+  <!-- Event details -->
+  <div style="padding:24px 24px 0">
+    <h2 style="margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">Event Details</h2>
+    <table style="width:100%;border-collapse:collapse">
+      <tr>
+        <td style="padding:5px 0;color:#888;width:90px;font-size:13px">&#128197; Date</td>
+        <td style="padding:5px 0;font-size:14px"><strong>${EVENT.date}</strong></td>
+      </tr>
+      <tr>
+        <td style="padding:5px 0;color:#888;font-size:13px">&#128336; Time</td>
+        <td style="padding:5px 0;font-size:14px">${sessionTime(participants)}</td>
+      </tr>
+      <tr>
+        <td style="padding:5px 0;color:#888;font-size:13px">&#128205; Location</td>
+        <td style="padding:5px 0;font-size:14px"><a href="${EVENT.mapUrl}" style="color:#1565c0">${EVENT.location}</a></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Participants -->
+  <div style="padding:24px 24px 0">
+    <h2 style="margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">Who's Grading</h2>
+    <table style="width:100%;border-collapse:collapse">${participantRows}</table>
+  </div>
+
+  <!-- Payment -->
+  <div style="padding:0 24px">
+    ${paymentBlock}
+  </div>
+
+  ${notesLine ? `<div style="padding:0 24px">${notesLine}</div>` : ""}
+
+  <!-- What to bring -->
+  <div style="padding:24px">
+    <h2 style="margin:0 0 12px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#D4A017;border-bottom:1px solid #eee;padding-bottom:8px">What to Bring</h2>
+    <ul style="margin:0;padding-left:20px;color:#444;font-size:14px;line-height:2">
+      <li>Clean gi and/or no-gi gear</li>
+      <li>Mouthguard</li>
+      <li>Water bottle</li>
+      <li>Your best attitude — leave nerves at the door</li>
+      ${isCash || isBank ? `<li><strong>$${Number(total).toFixed(2)}${isCash ? " cash" : " bank transfer completed"}</strong></li>` : ""}
+    </ul>
+  </div>
+
+  <!-- Closing -->
+  <div style="background:#1a1a1a;padding:24px;text-align:center">
+    <div style="font-size:22px;margin-bottom:8px">🤙</div>
+    <div style="color:#D4A017;font-weight:bold;font-size:16px">See you on the mats!</div>
+    <div style="color:#aaa;font-size:13px;margin-top:6px">The Harlequins BJJ Team</div>
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #333;font-size:11px;color:#666">
+      Questions? Reply to this email or contact us at harlequinsbjj@gmail.com
+    </div>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
 function belt(p) {
   const b = p.belt ? p.belt.charAt(0).toUpperCase() + p.belt.slice(1) : "—";
   const s = p.stripes ? ` · ${p.stripes} stripe${p.stripes === "1" ? "" : "s"}` : "";
@@ -353,6 +520,10 @@ exports.handler = async (event) => {
       }).catch((err) => console.error("Supabase write failed:", err))
     : Promise.resolve();
 
+  const registrantHtml    = buildRegistrantEmail(data);
+  const registrantSubject = `You're registered — Harlequins BJJ Grading, 13 June 2026`;
+  const registrantEmail   = data.contact?.email;
+
   try {
     await Promise.all([
       transporter.sendMail({
@@ -361,6 +532,14 @@ exports.handler = async (event) => {
         subject,
         html,
       }),
+      registrantEmail
+        ? transporter.sendMail({
+            from: `"Harlequins BJJ" <${user}>`,
+            to: registrantEmail,
+            subject: registrantSubject,
+            html: registrantHtml,
+          })
+        : Promise.resolve(),
       supabaseWrite,
     ]);
     return {
