@@ -75,6 +75,22 @@ Maintenance only. Update content for Mid-Year Grading event (13 June 2026).
 ## Known Issues / Hotfix History
 - 2026-03-20: .env must live in source/ (not 01_Ingestion/) — Metro needs it at root to embed EXPO_PUBLIC_ vars
 
+## Backup Procedure
+
+```bash
+# From this directory (01_Member_App/source/)
+git add <changed files>
+git commit -m "descriptive message"
+git push origin main
+```
+
+Remote: `https://github.com/csinclair256/harlequins-app.git`  
+Auth: `gh` CLI — token in macOS keyring. Run `gh auth status` to verify. Re-auth: `gh auth login --web`  
+Branch protection: force pushes + deletions blocked. No PR or signing requirement (solo project).
+
+**Never commit:** `.env`, `dist/`, `node_modules/`  
+**Always commit:** source changes, `grading-registration.html`, `netlify.toml`, `CLAUDE.md`
+
 ## Deploy Caution
 - LIVE PRODUCTION — test every change locally before deploying
 - Run `expo export --platform web` then check dist/ before `netlify deploy --prod`
