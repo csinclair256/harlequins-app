@@ -621,7 +621,7 @@
     .submit-btn {
       width: 100%;
       background: var(--gold);
-      color: #111;
+      color: #000000;
       border: none;
       border-radius: 10px;
       padding: 16px;
@@ -1253,12 +1253,13 @@ const CONFIG = {
   },
   
   // Square configuration - PRODUCTION
+  // accessToken is NOT stored here — it lives in Netlify environment variable
+  // SQUARE_ACCESS_TOKEN (set in Netlify Dashboard → Site → Environment Variables)
   square: {
     applicationId: 'sq0idp-s7IwTC81f-7dj9NQbw2R9A',
     locationId: 'LQK816AMQY1YZ',
-    accessToken: 'EAAAlw93iv4Npos7FxtI7yNISVnyKtvVm9FcNjGUoQFyeDVDntr7fFnXry3YroBH',
     environment: 'production',
-    processingFee: 0.022,                                      // 2.2% processing fee
+    processingFee: 0.022,
     currency: 'AUD'
   },
   
@@ -1295,10 +1296,67 @@ let participantCount = 0;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+
+  // ── Handle return from Square payment ──────────────────────────────────────
+  // Square redirects back to ?payment=success after a completed transaction.
+  // The form data was saved to sessionStorage before the redirect — consume it here.
+  const _urlParams = new URLSearchParams(window.location.search);
+  if (_urlParams.get('payment') === 'success') {
+    const _pending = sessionStorage.getItem('pendingRegistration');
+    if (_pending) {
+      const _data = JSON.parse(_pending);
+      sessionStorage.removeItem('pendingRegistration');
+
+      // Mark as card payment and confirmed
+      _data.payment = 'card';
+      _data.paymentStatus = 'paid';
+      _data.paymentConfirmedAt = new Date().toISOString();
+
+      // Save to organiser dashboard
+      saveRegistration(_data);
+
+      // Hide form, show success screen
+      document.getElementById('grading-form').style.display = 'none';
+      const _success = document.getElementById('success-screen');
+      _success.style.display = 'block';
+
+      // Personalise success message
+      const _names = _data.participants.map(p => p.first).join(', ');
+      const _products = _data.participants
+        .filter(p => p.product !== 'none')
+        .map(p => p.productName).join(', ');
+      let _msg = `Payment confirmed! Registration for <strong>${_names}</strong> is complete.`;
+      if (_products) _msg += `<br/>Products ordered: ${_products}`;
+      if (_data.totalCombinedSavings > 0) {
+        _msg += `<br/>💰 You saved <strong>$${_data.totalCombinedSavings.toFixed(2)}</strong>!`;
+      }
+      _msg += `<br/>Total paid: <strong>$${_data.total}</strong> via Card.`;
+      _msg += `<br/>A confirmation email will be sent to <strong>${_data.contact.email}</strong>.`;
+
+      document.getElementById('success-msg').innerHTML = _msg;
+      document.getElementById('download-ics').href = generateICS();
+      _success.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Clean up URL so a refresh doesn't re-trigger
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Notify organiser (email — wired up separately)
+      if (typeof notifyOrganiser === 'function') notifyOrganiser(_data);
+    } else {
+      // Payment=success but no pending data — redirect to clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    return; // Skip rest of init — form is hidden
+  }
+  // ── End payment return handler ─────────────────────────────────────────────
+
   addParticipant();
   document.getElementById('add-participant-btn').addEventListener('click', addParticipant);
   document.getElementById('grading-form').addEventListener('submit', handleSubmit);
-  document.querySelectorAll('.pay-option').forEach(r => r.addEventListener('change', updatePaymentDetail));
+  document.querySelectorAll('.pay-option').forEach(r => {
+    r.addEventListener('change', updatePaymentDetail);
+    r.addEventListener('change', updateSubmitButtonState);
+  });
   
   // Auto-populate participant details when "I am the student" is selected
   document.getElementById('contact-role').addEventListener('change', function(e) {
@@ -1347,16 +1405,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSubmitButtonState() {
     const submitBtn = document.getElementById('submit-btn');
     const consentTerms = document.getElementById('consent-terms');
-    
+    const cardSelected = document.getElementById('pay-stripe')?.checked;
+
     if (submitBtn && consentTerms) {
-      submitBtn.disabled = !consentTerms.checked;
-      if (consentTerms.checked) {
-        submitBtn.style.opacity = '1';
-        submitBtn.style.cursor = 'pointer';
-      } else {
-        submitBtn.style.opacity = '0.6';
-        submitBtn.style.cursor = 'not-allowed';
-      }
+      // Card payment: consent is collected after the Square redirect (post-payment section)
+      // so do not gate the Proceed button on consent for card payment.
+      // Bank / cash: consent must be checked before the button enables.
+      const needsConsent = !cardSelected && !consentTerms.checked;
+      submitBtn.disabled = needsConsent;
+      submitBtn.style.opacity = needsConsent ? '0.6' : '1';
+      submitBtn.style.cursor = needsConsent ? 'not-allowed' : 'pointer';
+      submitBtn.style.color = '#000';
     }
   }
   
@@ -2028,21 +2087,14 @@ function processPayment(data) {
   }
 }
 
-// Square payment processing  
+// Square payment processing
 function processSquarePayment(data) {
   console.log('processSquarePayment called with:', data);
-  console.log('CONFIG.square:', CONFIG.square);
-  
+
   try {
-    // Check if Square is properly configured
-    if (!CONFIG.square || !CONFIG.square.applicationId || !CONFIG.square.locationId || !CONFIG.square.accessToken) {
+    // Check if Square is properly configured (token lives server-side)
+    if (!CONFIG.square || !CONFIG.square.applicationId || !CONFIG.square.locationId) {
       console.error('Square configuration incomplete');
-      console.log('Missing:', {
-        hasSquare: !!CONFIG.square,
-        hasAppId: !!CONFIG.square?.applicationId,
-        hasLocationId: !!CONFIG.square?.locationId,
-        hasAccessToken: !!CONFIG.square?.accessToken
-      });
       return null;
     }
 
@@ -2081,16 +2133,12 @@ function processSquarePayment(data) {
       payment_note: orderSummary.substring(0, 500) // Square has a limit on note length
     };
 
-    console.log('Creating Square payment link:', paymentLinkData);
+    console.log('Creating Square payment link via proxy:', paymentLinkData);
 
-    // Use fetch to create the payment link
-    return fetch('https://connect.squareup.com/v2/online-checkout/payment-links', {
+    // Call the Netlify serverless function — token never touches the browser
+    return fetch('/.netlify/functions/create-payment-link', {
       method: 'POST',
-      headers: {
-        'Square-Version': '2026-01-22',
-        'Authorization': `Bearer ${CONFIG.square.accessToken}`,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(paymentLinkData)
     })
     .then(response => {

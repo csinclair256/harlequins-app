@@ -51,6 +51,8 @@ Maintenance only. Update content for Mid-Year Grading event (13 June 2026).
 
 ## Skills Assigned
 - `frontend-design` — UI reviews, grading-event content updates, theme checks
+- `security-review` — invoke before any production deploy
+- `council` — invoke before any Supabase schema change (shared project with Staff App)
 - Pattern: bugfix → test locally → `expo export --platform web` → verify dist/ → `netlify deploy --prod`
 
 ## Design Spec
