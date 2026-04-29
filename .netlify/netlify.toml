@@ -7,12 +7,13 @@ redirects = []
 [functions."*"]
 
 [build]
-publish = "/Users/cameronsinclair/Developer/Black_Apple/2100_Clients/Harlequins_BJJ/01_Ingestion/source/dist"
-publishOrigin = "ui"
-commandOrigin = "ui"
-command = "expo export -p web"
+publish = "/Users/cameronsinclair/Developer/Black_Apple/2100_Clients/Harlequins_BJJ/01_Member_App/source/dist"
+publishOrigin = "config"
+commandOrigin = "config"
+command = "expo export --platform web && cp grading-registration.html dist/grading-registration.html"
 
 [build.environment]
+NODE_VERSION = "20"
 
 [build.processing]
 

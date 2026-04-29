@@ -1,0 +1,6 @@
+[build]
+  command   = "expo export --platform web && cp grading-registration.html dist/grading-registration.html"
+  publish   = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"

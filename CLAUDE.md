@@ -15,7 +15,7 @@ LIVE — maintenance only. All new features require explicit client approval.
 | URL | https://harlequins-comp-tracker.netlify.app |
 | Netlify Site ID | 4ebf5eec-3fdc-4155-8347-117b4bb014d7 |
 | Deploy command | `netlify deploy --prod --dir=dist --site=4ebf5eec-3fdc-4155-8347-117b4bb014d7` |
-| Last verified | 2026-03-20 LIVE ✅ (Deploy ID: 69bcc9d388aa6f88cb839b84) |
+| Last verified | 2026-04-29 LIVE ✅ — production Square payments, grading form at /grading-registration |
 
 ## Next Action
 Maintenance only. Update content for Mid-Year Grading event (13 June 2026).
@@ -59,7 +59,7 @@ Maintenance only. Update content for Mid-Year Grading event (13 June 2026).
 
 ## Directory Structure
 ```
-01_Ingestion/source/
+01_Member_App/source/
 ├── app/              ← Expo Router pages
 ├── components/       ← UI components
 ├── config/           ← App config
