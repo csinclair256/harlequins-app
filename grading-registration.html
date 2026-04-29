@@ -1909,7 +1909,15 @@ function notifyOrganiser(data) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
-  }).catch(err => console.warn('Organiser notification failed:', err));
+  })
+    .then(res => res.json().then(body => {
+      if (!res.ok) {
+        console.error('Organiser notification error:', res.status, body);
+      } else {
+        console.log('Organiser notification sent:', body);
+      }
+    }))
+    .catch(err => console.warn('Organiser notification failed (network):', err));
 }
 
 function generateICS() {
