@@ -78,7 +78,8 @@ Next client work: Staff App scope sign-off (T007).
 - `frontend-design` — UI reviews, grading-event content updates, theme checks
 - `security-review` — invoke before any production deploy
 - `council` — invoke before any Supabase schema change (shared project with Staff App)
-- Pattern: bugfix → test locally → `expo export --platform web` → verify dist/ → `netlify deploy --prod`
+- Pattern: bugfix → test locally → `expo export --platform web` → verify dist/ → `netlify deploy --prod` → `git commit + push origin main`
+- Git push does NOT auto-deploy (manual CLI only). Push is required to keep GitHub in sync with what is live.
 
 ## Design Spec
 - Theme: Sovereign Harlequins Gold #D4A017, white base
@@ -120,6 +121,6 @@ Branch protection: force pushes + deletions blocked. No PR or signing requiremen
 
 ## Deploy Caution
 - LIVE PRODUCTION — test every change locally before deploying
-- Run `expo export --platform web` then check dist/ before `netlify deploy --prod`
+- Run `npx expo export --platform web`, then manually `cp grading-registration.html dist/`, then check dist/ before `netlify deploy --prod`
 - Confirm with Cameron before any production deploy
 - Never deploy from a dirty or untested build
